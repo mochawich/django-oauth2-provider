@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 import json
 import urlparse
 import logging
@@ -8,6 +9,9 @@ from django.views.generic.base import TemplateView
 from django.core.exceptions import ObjectDoesNotExist
 from oauth2.models import Client
 from . import constants, scope
+import inspect
+from oauth2.models import AccessToken as AccessTokenModel
+from django.utils.http import urlencode
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -280,16 +284,28 @@ class Authorize(OAuthView, Mixin):
             return self.error_response(request, e.args[0], status=400)
 
         authorization_form = self.get_authorization_form(request, client,
-            post_data, data)
+                                                         post_data, data)
 
-        if not authorization_form.is_bound or not authorization_form.is_valid():
-            return self.render_to_response({
-                'client': client,
-                'form': authorization_form,
-                'oauth_data': data, })
+        if data.get('response_type', None):
+            if data.get('response_type') == 'code':
+                if not authorization_form.is_bound \
+                        or not authorization_form.is_valid():
+                    return self.render_to_response({
+                        'client': client,
+                        'form': authorization_form,
+                        'oauth_data': data, })
+            # Implements the 'implicit grant'
+            elif data.get('response_type') == 'token':
+                # uses request.user as the urls.py already required login_required
+                atm = AccessTokenModel.objects.create(user=request.user,
+                                                      client=client,
+                                                      scope=data.get('scope'),
+                                                      expires=datetime.now() + timedelta(hours=1))
+                at = AccessToken()
+                return at.access_token_response(atm, data)
 
         code = self.save_authorization(request, client,
-            authorization_form, data)
+                                       authorization_form, data)
 
         # be sure to serialize any objects that aren't natively json
         # serializable because these values are stored as session data
@@ -500,9 +516,9 @@ class AccessToken(OAuthView, Mixin):
         *400* stating the error as outlined in :rfc:`5.2`.
         """
         return HttpResponse(json.dumps(error), content_type=content_type,
-                status=status, **kwargs)
+                            status=status, **kwargs)
 
-    def access_token_response(self, access_token):
+    def access_token_response(self, access_token, data=None):
         """
         Returns a successful response after creating the access token
         as defined in :rfc:`5.1`.
@@ -522,6 +538,18 @@ class AccessToken(OAuthView, Mixin):
             response_data['refresh_token'] = rt.token
         except ObjectDoesNotExist:
             pass
+
+        if data is not None and data.get('response_type') == 'token':
+            basepath = data.get("redirect_uri")
+            if not basepath:
+                return self.error_response({
+                    'error': 'invalid_request',
+                    'error_description': _("No redirect_uri was provided.")})
+            if len(data.get('state', '')) > 0:
+                response_data['state'] = data.get('state')
+            path = "%s#%s" % (basepath,
+                              urlencode(response_data))
+            return HttpResponseRedirect(path)
 
         return HttpResponse(
             json.dumps(response_data), content_type='application/json'
