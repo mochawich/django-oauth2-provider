@@ -4,16 +4,16 @@ from .models import AccessToken, Grant, Client, RefreshToken
 
 class AccessTokenAdmin(admin.ModelAdmin):
     list_display = ('user', 'client', 'token', 'expires', 'scope',)
-    raw_id_fields = ('user',)
+    raw_id_fields = ('user', 'client')
 
 
 class GrantAdmin(admin.ModelAdmin):
     list_display = ('user', 'client', 'code', 'expires',)
-    raw_id_fields = ('user',)
+    raw_id_fields = ('user', 'client')
 
 
 class ClientAdmin(admin.ModelAdmin):
-    list_display = ('url', 'user', 'redirect_uri', 'client_id', 'client_type')
+    list_display = ('id', 'name', 'url', 'user', 'redirect_uri', 'client_id', 'client_type')
     raw_id_fields = ('user',)
 
 admin.site.register(AccessToken, AccessTokenAdmin)
