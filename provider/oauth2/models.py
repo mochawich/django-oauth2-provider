@@ -53,7 +53,7 @@ class Client(models.Model):
         super(Client, self).save(*args, **kwargs)
 
     def __unicode__(self):
-        return self.redirect_uri
+        return self.redirect_uri or self.client_id
 
     def get_default_token_expiry(self):
         public = (self.client_type == 1)
