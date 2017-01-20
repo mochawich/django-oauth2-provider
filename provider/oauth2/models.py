@@ -3,8 +3,6 @@ Default model implementations. Custom database or OAuth backends need to
 implement these models with fields and and methods to be compatible with the
 views in :attr:`provider.views`.
 """
-from future.builtins import object
-
 import datetime
 
 from django.db import models
@@ -89,10 +87,6 @@ class Client(models.Model):
 
         return cls(**kwargs)
 
-    class Meta(object):
-        app_label = 'oauth2'
-        db_table = 'oauth2_client'
-
 
 class Grant(models.Model):
     """
@@ -125,10 +119,6 @@ class Grant(models.Model):
 
     def __unicode__(self):
         return self.code
-
-    class Meta(object):
-        app_label = 'oauth2'
-        db_table = 'oauth2_grant'
 
 
 class AccessToken(models.Model):
@@ -190,10 +180,6 @@ class AccessToken(models.Model):
         timedelta = expiration - reference
         return timedelta.days*86400 + timedelta.seconds
 
-    class Meta(object):
-        app_label = 'oauth2'
-        db_table = 'oauth2_accesstoken'
-
 
 class RefreshToken(models.Model):
     """
@@ -223,7 +209,3 @@ class RefreshToken(models.Model):
 
     def __unicode__(self):
         return self.token
-
-    class Meta(object):
-        app_label = 'oauth2'
-        db_table = 'oauth2_refreshtoken'
