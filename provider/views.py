@@ -1,17 +1,25 @@
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_hooks()
+from future.builtins import object
 from datetime import datetime, timedelta
 import json
-import urlparse
 import logging
 from django.http import HttpResponse
 from django.http import HttpResponseRedirect, QueryDict
 from django.utils.translation import ugettext as _
 from django.views.generic.base import TemplateView
 from django.core.exceptions import ObjectDoesNotExist
-from oauth2.models import Client
+from .oauth2.models import Client
 from . import constants, scope
 import inspect
 from oauth2.models import AccessToken as AccessTokenModel
 from django.utils.http import urlencode
+
+try:
+   from urllib import parse as urllib_parse
+except ImportError:
+    import urlparse as urllib_parse
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -79,7 +87,7 @@ class Mixin(object):
         """
         Clear all OAuth related data from the session store.
         """
-        for key in request.session.keys():
+        for key in list(request.session.keys()):
             if key.startswith(constants.SESSION_KEY):
                 del request.session[key]
 
@@ -363,7 +371,7 @@ class Redirect(OAuthView, Mixin):
 
         redirect_uri = data.get('redirect_uri', None) or client.redirect_uri.split(" ")[0]
 
-        parsed = urlparse.urlparse(redirect_uri)
+        parsed = urllib_parse.urlparse(redirect_uri)
 
         query = QueryDict('', mutable=True)
 
@@ -379,7 +387,7 @@ class Redirect(OAuthView, Mixin):
 
         parsed = parsed[:4] + (query.urlencode(), '')
 
-        redirect_uri = urlparse.ParseResult(*parsed).geturl()
+        redirect_uri = urllib_parse.ParseResult(*parsed).geturl()
 
         self.clear_data(request)
 
@@ -680,5 +688,5 @@ class AccessToken(OAuthView, Mixin):
 
         try:
             return handler(request, request.POST, client)
-        except OAuthError, e:
+        except OAuthError as e:
             return self.error_response(e.args[0])

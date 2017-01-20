@@ -18,8 +18,8 @@ def short_token():
     """
     Generate a hash that can be used as an application identifier
     """
-    hash = hashlib.sha1(shortuuid.uuid())
-    hash.update(settings.SECRET_KEY)
+    hash = hashlib.sha1(shortuuid.uuid().encode('utf-8'))
+    hash.update(settings.SECRET_KEY.encode('utf-8'))
     return hash.hexdigest()[::2]
 
 
@@ -27,8 +27,8 @@ def long_token():
     """
     Generate a hash that can be used as an application secret
     """
-    hash = hashlib.sha1(shortuuid.uuid())
-    hash.update(settings.SECRET_KEY)
+    hash = hashlib.sha1(shortuuid.uuid().encode('utf-8'))
+    hash.update(settings.SECRET_KEY.encode('utf-8'))
     return hash.hexdigest()
 
 
@@ -65,7 +65,7 @@ def serialize_instance(instance):
     if instance is None:
         return json.loads(json.dumps(None, cls=DjangoJSONEncoder))
     ret = dict([(k, v)
-                for k, v in instance.__dict__.items()
+                for k, v in list(instance.__dict__.items())
                 if not k.startswith('_')])
     return json.loads(json.dumps(ret, cls=DjangoJSONEncoder))
 
@@ -77,7 +77,7 @@ def deserialize_instance(model, data={}):
     The spec offers an optional "state" param that could be used for this instead
     """
     ret = model()
-    for k, v in data.items():
+    for k, v in list(data.items()):
         if v is not None:
             try:
                 f = model._meta.get_field(k)
